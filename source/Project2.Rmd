@@ -8,25 +8,37 @@ library(dplyr)
 ```
 
 ```{r obj1, echo=TRUE, include=TRUE}
+
 g_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
 
 g_recoveries <- read.csv(file="../data/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
 
 g_deaths <- read.csv(file="../data/time_series_covid19_deaths_global.csv", stringsAsFactors = FALSE)
 
-global_totals <- g_confirmed %>%
-  
-  select(Country.Region, X1.22.20:last_col()) %>%  # Select relevant columns
+get_total <- function(data_set) {
 
-  group_by(Country.Region) %>%  # Group by country name
+  data_set %>% # Opening the data set
+    
+    select(Country.Region, X1.22.20:last_col()) %>%  # Select country name and all date cols
+  
+    group_by(Country.Region) %>%  # Group by country name
+  
+    summarise_all(sum) %>%  # Total the countries data
+    
+    select(X1.22.20:last_col()) %>% # Select all date cols
+    
+    summarise_all(sum) %>% # Total the global data for each date
+    
+    gather(key=Days, value=Total.Data, X1.22.20:last_col()) %>% # Reshape the data
+    
+    mutate(Days=as.Date(Days, format= "X%m.%d.%y")) # Converting to date objects
+  
+}
 
-  summarise_all(sum) %>%  # Sum the cases
-  
-  select(X1.22.20:last_col()) %>%
-  
-  summarise_all(sum) %>%
-  
-  gather(key=Days, value=Confirmed.Cases, X1.22.20:last_col()) %>%
-  
-  mutate(Days=as.Date(Days, format= "X%m.%d.%y"))
+total_confirmed <- get_total(g_confirmed)
+
+total_recoveries <- get_total(g_recoveries)
+
+total_deaths <- get_total(g_deaths)
+
 ```
