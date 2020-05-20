@@ -10,6 +10,15 @@ library(stringr)
 ```
 
 ```{r obj1, echo=TRUE, include=TRUE}
+# -- Algorithm --
+# 1. Make a function that takes in a data set.
+# 2. Select the country name and the case data columns.
+# 3. Group by country and sum the rows.
+# 4. Select the case data columns.
+# 5. Sum each row of the case data.
+# 6. Reshape the data & convert dates to objects.
+# 7. Call the function for each data set.
+# 8. Plot the 3 data frames.
 
 g_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
 
@@ -19,12 +28,12 @@ g_deaths <- read.csv(file="../data/time_series_covid19_deaths_global.csv", strin
 
 get_total <- function(data_set) {
 
-  data_set %>% # Opening the data set
+  data_set %>% # Open the data set
     
     select(Country.Region, X1.22.20:last_col()) %>%  # Select country name and all date cols
-  
+    
     group_by(Country.Region) %>%  # Group by country name
-  
+    
     summarise_all(sum) %>%  # Total the countries data
     
     select(X1.22.20:last_col()) %>% # Select all date cols
@@ -37,7 +46,7 @@ get_total <- function(data_set) {
 
 }
 
-total_confirmed <- get_total(g_confirmed)
+total_confirmed <- get_total(g_confirmed) # get the totals
 
 total_recoveries <- get_total(g_recoveries)
 
@@ -45,14 +54,14 @@ total_deaths <- get_total(g_deaths)
 
 ggplot() + # Make the plot
   
-  geom_point(total_confirmed, mapping =  aes(y=Cases, x=Recorded.Days), color="#66B965") +
+  geom_point(total_confirmed, mapping =  aes(y=Cases, x=Recorded.Days), color="#66B965") + # confirmed plot
   
-  geom_point(total_recoveries, mapping = aes(y=Cases, x=Recorded.Days), color="#416CA7") +
+  geom_point(total_recoveries, mapping = aes(y=Cases, x=Recorded.Days), color="#416CA7") + # recoveries plot
   
-  geom_point(total_deaths, mapping = aes(y=Cases, x=Recorded.Days), color="#DD6868") +
-  
-  scale_y_continuous(name="Cases", limits=c(0, 5000000)) # y axis
+  geom_point(total_deaths, mapping = aes(y=Cases, x=Recorded.Days), color="#DD6868") + # deaths plot
 
-
+  scale_y_continuous(name="Cases", labels=function(x) format(x, scientific = FALSE)) + # y axis
+  
+  scale_x_date(name="Date") # x axis
 
 ```
