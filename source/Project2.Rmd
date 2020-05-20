@@ -20,11 +20,11 @@ library(stringr)
 # 7. Call the function for each data set.
 # 8. Plot the 3 data frames.
 
-g_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
+global_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
 
-g_recoveries <- read.csv(file="../data/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
+global_recoveries <- read.csv(file="../data/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
 
-g_deaths <- read.csv(file="../data/time_series_covid19_deaths_global.csv", stringsAsFactors = FALSE)
+global_deaths <- read.csv(file="../data/time_series_covid19_deaths_global.csv", stringsAsFactors = FALSE)
 
 get_total <- function(data_set) {
 
@@ -38,30 +38,106 @@ get_total <- function(data_set) {
     
     select(X1.22.20:last_col()) %>% # Select all date cols
     
-    summarise_all(sum) %>% # Total the global data for each date
-    
-    gather(key=Recorded.Days, value=Cases, X1.22.20:last_col()) %>% # Reshape the data
-    
-    mutate(Recorded.Days=as.Date(Recorded.Days, format= "X%m.%d.%y")) # Converting to date objects
+    summarise_all(sum) # Total the global data for each date
 
 }
 
-total_confirmed <- get_total(g_confirmed) # get the totals
+total_confirmed <- get_total(global_confirmed) %>% # get the totals
+  
+  mutate(Data_Type = "Confirmed") # Adding label column
 
-total_recoveries <- get_total(g_recoveries)
+total_recoveries <- get_total(global_recoveries) %>%
+  
+  mutate(Data_Type = "Recoveries") # Adding label column
 
-total_deaths <- get_total(g_deaths)
+total_deaths <- get_total(global_deaths) %>%
+  
+  mutate(Data_Type = "Deaths") # Adding label column
+
+global_data <- rbind(total_confirmed, total_recoveries, total_deaths) %>% # Combine the 3 rows
+  
+  select(Data_Type, X1.22.20:last_col()) %>% # Select labels and data
+  
+  gather(key=Recorded.Days, value=Cases, X1.22.20:last_col()) %>%  # Reshape data
+    
+  mutate(Recorded.Days=as.Date(Recorded.Days, format= "X%m.%d.%y")) # Convert dates to objects
 
 ggplot() + # Make the plot
   
-  geom_point(total_confirmed, mapping =  aes(y=Cases, x=Recorded.Days), color="#66B965") + # confirmed plot
-  
-  geom_point(total_recoveries, mapping = aes(y=Cases, x=Recorded.Days), color="#416CA7") + # recoveries plot
-  
-  geom_point(total_deaths, mapping = aes(y=Cases, x=Recorded.Days), color="#DD6868") + # deaths plot
+  geom_point(global_data, mapping = aes(y=Cases, x=Recorded.Days, fill=Data_Type, color=Data_Type)) + # Point plot
 
   scale_y_continuous(name="Cases", labels=function(x) format(x, scientific = FALSE)) + # y axis
   
   scale_x_date(name="Date") # x axis
 
 ```
+
+
+```{r obj1, echo=TRUE, include=TRUE}
+
+us_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_US.csv", stringsAsFactors = FALSE)
+
+us_deaths <- read.csv(file="../data/time_series_covid19_deaths_US.csv", stringsAsFactors = FALSE)
+
+ca_total <- function(data_set) {
+
+  data_set %>% # opening whichever data
+      
+    select(Province_State, X1.22.20:last_col()) %>% # Select states & data
+      
+    group_by(Province_State) %>% # Group data by state
+      
+    summarise_all(sum) %>% # Sum the data
+    
+    filter(Province_State == "California") # Selecting CA row
+  
+}
+
+deaths_ca <- ca_total(us_deaths) %>% # Getting CA deaths
+  
+  mutate(Data_Type = "Deaths") # Adding label column
+
+confirmed_ca <- ca_total(us_confirmed) %>% # Getting CA confirmed cases
+  
+  mutate(Data_Type = "Confirmed") # Adding label column
+
+total_ca <- rbind(deaths_ca, confirmed_ca) %>% # Combine the 2 rows
+  
+  select(Data_Type, X1.22.20:last_col()) %>% # Select labels and data
+  
+  gather(key=Recorded.Days, value=Cases, X1.22.20:last_col()) %>%  # Reshape data
+    
+  mutate(Recorded.Days=as.Date(Recorded.Days, format= "X%m.%d.%y")) # Convert dates to objects
+
+top3_confirmed_ca <- us_confirmed %>% # Confirmed cases top 3 in CA
+  
+  select(Admin2, Province_State, X1.22.20:last_col()) %>% # select city, state, data
+
+  filter(Province_State == "California") %>% # Filter CA cities
+  
+  arrange_at(ncol(.), desc) %>% # Descending order
+  
+  slice(1:3) %>% # top 3
+  
+  gather(key=Recorded.Days, value=Cases, X1.22.20:last_col()) %>% # Reshape the data
+    
+  mutate(Recorded.Days=as.Date(Recorded.Days, format= "X%m.%d.%y")) # Converting to date objects
+
+ggplot() + # Total deaths in California vs confirmed cases
+  
+  geom_point(total_ca, mapping = aes(y=Cases, x=Recorded.Days, fill=Data_Type, color=Data_Type)) + # Point plot
+  
+  scale_y_continuous(name="Cases", labels=function(x) format(x, scientific = FALSE)) + # y axis
+  
+  scale_x_date(name="Date") # x axis
+
+ggplot() + # Top cities in California
+  
+  geom_point(top3_confirmed_ca, mapping = aes(y=Cases, x=Recorded.Days, fill=Admin2, color=Admin2)) + # Point plot
+
+  scale_y_continuous(name="Cases", labels=function(x) format(x, scientific = FALSE)) + # y axis
+  
+  scale_x_date(name="Date") # x axis
+```
+
+
