@@ -5,6 +5,8 @@ output: html_document
 
 ```{r setup, include=FALSE}
 library(dplyr)
+library(tidyverse)
+library(stringr)
 ```
 
 ```{r obj1, echo=TRUE, include=TRUE}
@@ -29,10 +31,10 @@ get_total <- function(data_set) {
     
     summarise_all(sum) %>% # Total the global data for each date
     
-    gather(key=Days, value=Total.Data, X1.22.20:last_col()) %>% # Reshape the data
+    gather(key=Recorded.Days, value=Cases, X1.22.20:last_col()) %>% # Reshape the data
     
-    mutate(Days=as.Date(Days, format= "X%m.%d.%y")) # Converting to date objects
-  
+    mutate(Recorded.Days=as.Date(Recorded.Days, format= "X%m.%d.%y")) # Converting to date objects
+
 }
 
 total_confirmed <- get_total(g_confirmed)
@@ -40,5 +42,17 @@ total_confirmed <- get_total(g_confirmed)
 total_recoveries <- get_total(g_recoveries)
 
 total_deaths <- get_total(g_deaths)
+
+ggplot() + # Make the plot
+  
+  geom_point(total_confirmed, mapping =  aes(y=Cases, x=Recorded.Days), color="#66B965") +
+  
+  geom_point(total_recoveries, mapping = aes(y=Cases, x=Recorded.Days), color="#416CA7") +
+  
+  geom_point(total_deaths, mapping = aes(y=Cases, x=Recorded.Days), color="#DD6868") +
+  
+  scale_y_continuous(name="Cases", limits=c(0, 5000000)) # y axis
+
+
 
 ```
