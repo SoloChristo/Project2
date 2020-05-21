@@ -7,6 +7,8 @@ output: html_document
 library(dplyr)
 library(tidyverse)
 library(stringr)
+library(cowplot)
+library(scales)
 ```
 
 ```{r obj1, echo=TRUE, include=TRUE}
@@ -73,7 +75,7 @@ ggplot() + # Make the plot
 ```
 
 
-```{r obj1, echo=TRUE, include=TRUE}
+```{r obj4, echo=TRUE, include=TRUE}
 
 us_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_US.csv", stringsAsFactors = FALSE)
 
@@ -138,6 +140,36 @@ ggplot() + # Top cities in California
   scale_y_continuous(name="Cases", labels=function(x) format(x, scientific = FALSE)) + # y axis
   
   scale_x_date(name="Date") # x axis
+```
+
+```{r obj5, echo=TRUE, include=TRUE}
+
+us_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_US.csv", stringsAsFactors = FALSE)
+
+us_deaths <- read.csv(file="../data/time_series_covid19_deaths_US.csv", stringsAsFactors = FALSE)
+
+city_cases <- us_confirmed %>%
+  
+  mutate(Population=us_deaths$Population) %>%
+
+  select(Population, Confirmed_Cases = last_col()-1) %>%
+  
+  filter(Confirmed_Cases != 0) %>%
+  
+  filter(Population != 0)
+
+print(city_cases)
+
+ggplot(city_cases, aes(Population, Confirmed_Cases)) +
+  
+  geom_point() +
+  
+  scale_x_log10(name="Population", labels=function(x) format(x, scientific = FALSE)) + # y axis
+  
+  scale_y_log10(name="Confirmation Counts", labels=function(x) format(x, scientific = FALSE)) # y axis
+  
+  
+
 ```
 
 
