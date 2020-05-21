@@ -160,13 +160,13 @@ city_cases <- us_confirmed %>%
 
 print(city_cases)
 
-ggplot(city_cases, aes(Population, Confirmed_Cases)) +
+ggplot(city_cases, aes(x=Population, y=Confirmed_Cases)) +
   
   geom_point() +
   
-  scale_x_log10(name="Population", labels=function(x) format(x, scientific = FALSE)) + # y axis
+  scale_x_continuous(name="Population", labels=function(x) format(x, scientific = FALSE), trans = 'log') + # y axis
   
-  scale_y_log10(name="Confirmation Counts", labels=function(x) format(x, scientific = FALSE)) # y axis
+  scale_y_continuous(name="Confirmation Counts", labels=function(x) format(x, scientific = FALSE), trans = 'log') 
   
   
 
