@@ -8,6 +8,7 @@ library(dplyr)
 library(tidyverse)
 library(stringr)
 library(cowplot)
+library(leaflet)
 library(scales)
 ```
 
@@ -22,11 +23,11 @@ library(scales)
 # 7. Call the function for each data set.
 # 8. Plot the 3 data frames.
 
-global_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
+global_confirmed <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
 
-global_recoveries <- read.csv(file="../data/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
+global_recoveries <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
 
-global_deaths <- read.csv(file="../data/time_series_covid19_deaths_global.csv", stringsAsFactors = FALSE)
+global_deaths <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", stringsAsFactors = FALSE)
 
 get_total <- function(data_set) {
 
@@ -74,12 +75,60 @@ ggplot() + # Make the plot
 
 ```
 
+```{r obj2, echo=TRUE, include=TRUE}
+global_confirmed <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
+
+global_recoveries <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
+
+global_deaths <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", stringsAsFactors = FALSE)
+ 
+get_total <- function(data_set) {
+
+  data_set %>% # Open the data set
+    
+    select(Province.State, Country.Region, Lat, Long, Total.Cases = last_col()) # Select country name and all date cols
+
+}
+
+total_confirmed <- get_total(global_confirmed) %>% # get the totals
+  
+  mutate(Data_Type = "Confirmed") # Adding label column
+
+total_recoveries <- get_total(global_recoveries) %>%
+  
+  mutate(Data_Type = "Recoveries") # Adding label column
+
+total_deaths <- get_total(global_deaths) %>%
+  
+  mutate(Data_Type = "Deaths") # Adding label column
+
+global_data <- rbind(total_confirmed, total_recoveries, total_deaths) %>% # Combine the 3 rows
+  
+  select(Province.State, Country.Region, Lat, Long, Data_Type, Total.Cases) %>% # Select labels and data
+
+  filter(Total.Cases > 0)
+
+leaflet(global_data) %>% addTiles() %>%
+  
+  addCircles(
+    
+    lat = ~Lat,
+    
+    lng = ~Long,
+    
+    popup = ~Country.Region,
+    
+    radius = ~Total.Cases
+    
+  )
+
+```
 
 ```{r obj4, echo=TRUE, include=TRUE}
 
-us_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_US.csv", stringsAsFactors = FALSE)
+us_confirmed <- read.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv", stringsAsFactors = FALSE)
 
-us_deaths <- read.csv(file="../data/time_series_covid19_deaths_US.csv", stringsAsFactors = FALSE)
+us_deaths <- read.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv", stringsAsFactors = FALSE)
 
 ca_total <- function(data_set) {
 
@@ -144,31 +193,23 @@ ggplot() + # Top cities in California
 
 ```{r obj5, echo=TRUE, include=TRUE}
 
-us_confirmed <- read.csv(file="../data/time_series_covid19_confirmed_US.csv", stringsAsFactors = FALSE)
+us_confirmed <- read.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv", stringsAsFactors = FALSE)
 
-us_deaths <- read.csv(file="../data/time_series_covid19_deaths_US.csv", stringsAsFactors = FALSE)
+us_deaths <- read.csv("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv", stringsAsFactors = FALSE)
 
-city_cases <- us_confirmed %>%
+cities_cases <- us_confirmed %>%
   
   mutate(Population=us_deaths$Population) %>%
 
   select(Population, Confirmed_Cases = last_col()-1) %>%
   
-  filter(Confirmed_Cases != 0) %>%
-  
-  filter(Population != 0)
+  filter(Confirmed_Cases > 10) %>% filter(Population > 10) 
 
-print(city_cases)
-
-ggplot(city_cases, aes(x=Population, y=Confirmed_Cases)) +
+ggplot(cities_cases, aes(x=Population, y=Confirmed_Cases)) + geom_point() + 
   
-  geom_point() +
+  scale_y_continuous("Cases", labels = comma_format(), trans = log2_trans()) + 
   
-  scale_x_continuous(name="Population", labels=function(x) format(x, scientific = FALSE), trans = 'log') + # y axis
-  
-  scale_y_continuous(name="Confirmation Counts", labels=function(x) format(x, scientific = FALSE), trans = 'log') 
-  
-  
+  scale_x_continuous("Population", labels = comma_format(), trans = log2_trans())
 
 ```
 
