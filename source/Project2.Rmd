@@ -10,6 +10,9 @@ library(stringr)
 library(cowplot)
 library(leaflet)
 library(scales)
+library(knitr)
+library(plyr)
+library(kableExtra)
 ```
 
 ```{r obj1, echo=TRUE, include=TRUE}
@@ -67,15 +70,20 @@ global_data <- rbind(total_confirmed, total_recoveries, total_deaths) %>% # Comb
 
 ggplot() + # Make the plot
   
-  geom_point(global_data, mapping = aes(y=Cases, x=Recorded.Days, fill=Data_Type, color=Data_Type)) + # Point plot
-
+  geom_point(global_data, mapping = aes(y=Cases, x=Recorded.Days, color=Data_Type)) + # Point plot
+  
   scale_y_continuous(name="Cases", labels=function(x) format(x, scientific = FALSE)) + # y axis
   
-  scale_x_date(name="Date") # x axis
+  scale_x_date(name="Date") + # x axis
+  
+  ggtitle("Global Trajectory of Covid-19") +
+  
+  scale_colour_discrete("Global Data Set")
 
 ```
 
 ```{r obj2, echo=TRUE, include=TRUE}
+
 global_confirmed <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
 
 global_recoveries <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
@@ -108,19 +116,60 @@ global_data <- rbind(total_confirmed, total_recoveries, total_deaths) %>% # Comb
 
   filter(Total.Cases > 0)
 
+pal <- colorFactor(c("navy", "red", "green"), domain = c("Confirmed", "Recoveries", "Deaths"))
+
 leaflet(global_data) %>% addTiles() %>%
   
-  addCircles(
-    
+  addCircles (
     lat = ~Lat,
-    
     lng = ~Long,
-    
-    popup = ~Country.Region,
-    
-    radius = ~Total.Cases
-    
+    popup = ~paste(Data_Type, ":", Total.Cases),
+    radius = ~Total.Cases,
+    color = ~pal(Data_Type),
+    label = ~ifelse(Province.State == "", Country.Region, Province.State)
   )
+
+```
+
+```{r obj3, echo=TRUE, include=TRUE}
+
+global_confirmed <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_global.csv", stringsAsFactors = FALSE)
+
+global_recoveries <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_recovered_global.csv", stringsAsFactors = FALSE)
+
+global_deaths <- read.csv(file="https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_global.csv", stringsAsFactors = FALSE)
+
+get_ordered <- function(data_set) {
+
+  data_set %>% # Open the data set
+    
+    select(Country.Region, Total.Data = last_col()) %>%  # Select country name and all date cols
+    
+    arrange_at(ncol(.), desc)
+
+}
+
+confirmed_order <- get_ordered(global_confirmed) %>%
+  
+  mutate(Rank = 1:nrow(global_confirmed))
+
+recovered_ordered <- get_ordered(global_recoveries) %>%
+  
+  mutate(Rank = 1:nrow(global_recoveries))
+
+deaths_ordered <- get_ordered(global_deaths) %>%
+  
+  mutate(Rank = 1:nrow(global_deaths))
+
+total_data <- merge(confirmed_order, recovered_ordered, by = "Rank", all = T)
+  
+total_data <- merge(total_data, deaths_ordered, by = "Rank", all = T)
+
+kable(total_data) %>% 
+  
+  kable_styling() %>%
+
+  add_header_above(c(" " = 1, "Confirmations" = 2, "Recoveries" = 2, "Deaths" = 2))
 
 ```
 
@@ -201,15 +250,42 @@ cities_cases <- us_confirmed %>%
   
   mutate(Population=us_deaths$Population) %>%
 
-  select(Population, Confirmed_Cases = last_col()-1) %>%
-  
-  filter(Confirmed_Cases > 10) %>% filter(Population > 10) 
+  select(Population, Confirmed_Cases = last_col()-1) 
 
-ggplot(cities_cases, aes(x=Population, y=Confirmed_Cases)) + geom_point() + 
+cities_deaths <- us_deaths %>%
+  
+  mutate(Confirmed_Cases=cities_cases$Confirmed_Cases) %>%
+
+  select(Confirmed_Cases, Deaths = last_col()-1) %>%
+  
+  filter(Confirmed_Cases > 10) %>% filter(Deaths > 10)
+
+cities_cases <- cities_cases %>%
+  
+  filter(Confirmed_Cases > 10) %>% filter(Population > 10)
+
+a <- ggplot(cities_cases, aes(x=Population, y=Confirmed_Cases, color="Blue")) + geom_point() + 
   
   scale_y_continuous("Cases", labels = comma_format(), trans = log2_trans()) + 
   
-  scale_x_continuous("Population", labels = comma_format(), trans = log2_trans())
+  scale_x_continuous("Population", labels = comma_format(), trans = log2_trans()) +
+  
+  theme(legend.position = "none") +
+  
+  ggtitle("Confirmations vs Population")
+
+b <- ggplot(cities_deaths, aes(x=Confirmed_Cases, y=Deaths)) + geom_point() + 
+  
+  scale_y_continuous("Deaths", labels = comma_format(), trans = log2_trans()) + 
+  
+  scale_x_continuous("Cases", labels = comma_format(), trans = log2_trans()) +
+  
+  ggtitle("Deaths vs Confirmations")
+
+plot_grid(
+  a, b,
+  align="h"
+)
 
 ```
 
